@@ -1,0 +1,319 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  EMPLOYEE
+  HR_ADMIN
+  SUPER_ADMIN
+}
+
+enum ModuleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum VersionStatus {
+  DRAFT
+  PUBLISHED
+  RETIRED
+}
+
+enum LessonType {
+  VIDEO
+  PDF
+  RICH_TEXT
+}
+
+enum AssignmentTarget {
+  ALL_EMPLOYEES
+  STORE
+  DEPARTMENT
+  INDIVIDUAL
+}
+
+enum EnrollmentStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum QuestionType {
+  SINGLE_CHOICE
+  TRUE_FALSE
+}
+
+enum EmailStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model Store {
+  id          String       @id @default(cuid())
+  code        String       @unique
+  name        String
+  active      Boolean      @default(true)
+  users       User[]
+  assignments Assignment[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Department {
+  id          String       @id @default(cuid())
+  code        String       @unique
+  name        String
+  active      Boolean      @default(true)
+  users       User[]
+  assignments Assignment[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model User {
+  id                  String       @id @default(cuid())
+  employeeCode        String       @unique
+  name                String
+  email               String?      @unique
+  passwordHash        String
+  role                Role         @default(EMPLOYEE)
+  active              Boolean      @default(true)
+  forcePasswordChange Boolean      @default(true)
+  storeId             String?
+  store               Store?       @relation(fields: [storeId], references: [id])
+  departmentId        String?
+  department          Department?  @relation(fields: [departmentId], references: [id])
+  enrollments         Enrollment[]
+  createdAssignments  Assignment[] @relation("AssignmentCreator")
+  targetedAssignments Assignment[] @relation("AssignmentTargetUser")
+  auditEvents         AuditEvent[] @relation("AuditActor")
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  @@index([storeId, active])
+  @@index([departmentId, active])
+}
+
+model TrainingModule {
+  id          String          @id @default(cuid())
+  slug        String          @unique
+  title       String
+  description String?
+  status      ModuleStatus    @default(DRAFT)
+  versions    ModuleVersion[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model ModuleVersion {
+  id               String            @id @default(cuid())
+  moduleId         String
+  module           TrainingModule    @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  version          Int
+  title            String
+  description      String?
+  status           VersionStatus     @default(DRAFT)
+  policyStatement  String?
+  publishedAt      DateTime?
+  sections         Section[]
+  assets           Asset[]
+  quiz             Quiz?
+  assignments      Assignment[]
+  acknowledgements Acknowledgement[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@unique([moduleId, version])
+  @@index([status, publishedAt])
+}
+
+model Section {
+  id              String        @id @default(cuid())
+  moduleVersionId String
+  moduleVersion   ModuleVersion @relation(fields: [moduleVersionId], references: [id], onDelete: Cascade)
+  title           String
+  position        Int
+  lessons         Lesson[]
+
+  @@unique([moduleVersionId, position])
+}
+
+model Lesson {
+  id                      String           @id @default(cuid())
+  sectionId               String
+  section                 Section          @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  title                   String
+  type                    LessonType
+  position                Int
+  body                    String?
+  sourceUrl               String?
+  youtubeVideoId          String?
+  required                Boolean          @default(true)
+  videoDurationSeconds    Int?
+  requiredWatchPercentage Int              @default(95)
+  progress                LessonProgress[]
+
+  @@unique([sectionId, position])
+}
+
+model Asset {
+  id              String        @id @default(cuid())
+  moduleVersionId String
+  moduleVersion   ModuleVersion @relation(fields: [moduleVersionId], references: [id], onDelete: Cascade)
+  label           String
+  url             String
+  fileName        String
+  mimeType        String
+  sizeBytes       Int
+  createdAt       DateTime      @default(now())
+}
+
+model Quiz {
+  id              String        @id @default(cuid())
+  moduleVersionId String        @unique
+  moduleVersion   ModuleVersion @relation(fields: [moduleVersionId], references: [id], onDelete: Cascade)
+  title           String
+  passingScore    Int           @default(80)
+  questions       Question[]
+  attempts        QuizAttempt[]
+}
+
+model Question {
+  id       String           @id @default(cuid())
+  quizId   String
+  quiz     Quiz             @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  position Int
+  prompt   String
+  type     QuestionType
+  options  QuestionOption[]
+
+  @@unique([quizId, position])
+}
+
+model QuestionOption {
+  id         String   @id @default(cuid())
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  position   Int
+  label      String
+  isCorrect  Boolean  @default(false)
+
+  @@unique([questionId, position])
+}
+
+model Assignment {
+  id              String           @id @default(cuid())
+  moduleVersionId String
+  moduleVersion   ModuleVersion    @relation(fields: [moduleVersionId], references: [id])
+  target          AssignmentTarget
+  storeId         String?
+  store           Store?           @relation(fields: [storeId], references: [id])
+  departmentId    String?
+  department      Department?      @relation(fields: [departmentId], references: [id])
+  targetUserId    String?
+  targetUser      User?            @relation("AssignmentTargetUser", fields: [targetUserId], references: [id])
+  mandatory       Boolean          @default(true)
+  dueDate         DateTime?        @db.Date
+  createdById     String
+  createdBy       User             @relation("AssignmentCreator", fields: [createdById], references: [id])
+  enrollments     Enrollment[]
+  createdAt       DateTime         @default(now())
+
+  @@index([moduleVersionId])
+  @@index([target, dueDate])
+}
+
+model Enrollment {
+  id              String           @id @default(cuid())
+  assignmentId    String
+  assignment      Assignment       @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User             @relation(fields: [userId], references: [id])
+  status          EnrollmentStatus @default(NOT_STARTED)
+  startedAt       DateTime?
+  completedAt     DateTime?
+  lessonProgress  LessonProgress[]
+  quizAttempts    QuizAttempt[]
+  acknowledgement Acknowledgement?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@unique([assignmentId, userId])
+  @@index([userId, status])
+}
+
+model LessonProgress {
+  id                  String     @id @default(cuid())
+  enrollmentId        String
+  enrollment          Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  lessonId            String
+  lesson              Lesson     @relation(fields: [lessonId], references: [id])
+  lastPositionSeconds Int        @default(0)
+  watchedSeconds      Int        @default(0)
+  percentComplete     Int        @default(0)
+  completedAt         DateTime?
+  updatedAt           DateTime   @updatedAt
+
+  @@unique([enrollmentId, lessonId])
+}
+
+model QuizAttempt {
+  id           String     @id @default(cuid())
+  enrollmentId String
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  quizId       String
+  quiz         Quiz       @relation(fields: [quizId], references: [id])
+  score        Int
+  passed       Boolean
+  answers      Json
+  completedAt  DateTime   @default(now())
+
+  @@index([enrollmentId, completedAt])
+}
+
+model Acknowledgement {
+  id              String        @id @default(cuid())
+  enrollmentId    String        @unique
+  enrollment      Enrollment    @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  moduleVersionId String
+  moduleVersion   ModuleVersion @relation(fields: [moduleVersionId], references: [id])
+  statement       String
+  acknowledgedAt  DateTime      @default(now())
+}
+
+model AuditEvent {
+  id                String   @id @default(cuid())
+  actorId           String?
+  actor             User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  actorEmployeeCode String
+  action            String
+  targetType        String
+  targetId          String
+  diff              Json?
+  createdAt         DateTime @default(now())
+
+  @@index([targetType, targetId, createdAt])
+  @@index([createdAt])
+}
+
+model EmailOutbox {
+  id            String      @id @default(cuid())
+  recipient     String
+  subject       String
+  htmlBody      String
+  status        EmailStatus @default(PENDING)
+  attempts      Int         @default(0)
+  nextAttemptAt DateTime    @default(now())
+  lastError     String?
+  sentAt        DateTime?
+  createdAt     DateTime    @default(now())
+
+  @@index([status, nextAttemptAt])
+}
