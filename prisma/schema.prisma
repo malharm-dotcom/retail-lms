@@ -123,6 +123,7 @@ model ModuleVersion {
   description      String?
   status           VersionStatus     @default(DRAFT)
   policyStatement  String?
+  sequential       Boolean           @default(true)
   publishedAt      DateTime?
   sections         Section[]
   assets           Asset[]
@@ -160,21 +161,26 @@ model Lesson {
   required                Boolean          @default(true)
   videoDurationSeconds    Int?
   requiredWatchPercentage Int              @default(95)
+  assetId                 String?
+  asset                   Asset?           @relation(fields: [assetId], references: [id])
   progress                LessonProgress[]
 
   @@unique([sectionId, position])
 }
 
+// Uploaded files live in Postgres so the database backup covers them.
+// Never load `data` in list queries.
 model Asset {
-  id              String        @id @default(cuid())
-  moduleVersionId String
-  moduleVersion   ModuleVersion @relation(fields: [moduleVersionId], references: [id], onDelete: Cascade)
+  id              String         @id @default(cuid())
+  moduleVersionId String?
+  moduleVersion   ModuleVersion? @relation(fields: [moduleVersionId], references: [id], onDelete: SetNull)
   label           String
-  url             String
   fileName        String
   mimeType        String
   sizeBytes       Int
-  createdAt       DateTime      @default(now())
+  data            Bytes
+  lessons         Lesson[]
+  createdAt       DateTime       @default(now())
 }
 
 model Quiz {
@@ -241,6 +247,7 @@ model Enrollment {
   status          EnrollmentStatus @default(NOT_STARTED)
   startedAt       DateTime?
   completedAt     DateTime?
+  lastReminderAt  DateTime?
   lessonProgress  LessonProgress[]
   quizAttempts    QuizAttempt[]
   acknowledgement Acknowledgement?
@@ -259,6 +266,7 @@ model LessonProgress {
   lesson              Lesson     @relation(fields: [lessonId], references: [id])
   lastPositionSeconds Int        @default(0)
   watchedSeconds      Int        @default(0)
+  watchedRanges       Json       @default("[]")
   percentComplete     Int        @default(0)
   completedAt         DateTime?
   updatedAt           DateTime   @updatedAt

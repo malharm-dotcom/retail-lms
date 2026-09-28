@@ -21,3 +21,18 @@ describe("employee credentials", () => {
     await expect(verifyCredentials(null, "anything")).resolves.toBe(false);
   });
 });
+
+describe("password rules", () => {
+  it("generates readable temporary passwords", async () => {
+    const { generateTemporaryPassword } = await import("./credentials");
+    expect(generateTemporaryPassword()).toMatch(/^[A-HJ-NP-Za-km-z2-9]{10}$/);
+  });
+
+  it("explains weak passwords", async () => {
+    const { passwordProblem } = await import("./credentials");
+    expect(passwordProblem("short1", "E1")).toBe("Use at least 8 characters.");
+    expect(passwordProblem("lettersonly", "E1")).toBe("Use both letters and numbers.");
+    expect(passwordProblem("xxEMP042yy1", "emp042")).toBe("Do not include your employee code.");
+    expect(passwordProblem("Store2026ok", "EMP042")).toBeNull();
+  });
+});

@@ -33,19 +33,22 @@ export function LoginForm() {
 
   return (
     <form className="login-form" onSubmit={submit}>
-      <label>
+      <label className="field">
         <span>Employee code</span>
         <input name="employeeCode" autoComplete="username" required autoFocus />
       </label>
-      <label>
+      <label className="field">
         <span>Password</span>
         <input name="password" type="password" autoComplete="current-password" required />
       </label>
-      {error ? <p className="form-error" role="alert">{error}</p> : null}
-      <button type="submit" disabled={submitting}>
+      {error ? (
+        <p className="form-message is-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <button className="btn btn-primary" type="submit" disabled={submitting}>
         {submitting ? "Signing in…" : "Sign in"}
       </button>
     </form>
   );
 }
-

@@ -36,49 +36,6 @@ function calendarDate(value: Date | null): string | null {
   return value ? value.toISOString().slice(0, 10) : null;
 }
 
-export async function getEmployeeDashboard(userId: string) {
-  const enrollments = await prisma().enrollment.findMany({
-    where: { userId },
-    include: {
-      assignment: {
-        include: {
-          moduleVersion: {
-            include: {
-              module: true,
-              sections: { include: { lessons: { where: { required: true }, select: { id: true } } } },
-            },
-          },
-        },
-      },
-      lessonProgress: { where: { completedAt: { not: null } }, select: { lessonId: true } },
-    },
-    orderBy: [{ status: "asc" }, { createdAt: "desc" }],
-  });
-
-  const items = enrollments.map((enrollment) => ({
-    id: enrollment.id,
-    title: enrollment.assignment.moduleVersion.title,
-    description:
-      enrollment.assignment.moduleVersion.description ?? enrollment.assignment.moduleVersion.module.description,
-    status: enrollment.status,
-    mandatory: enrollment.assignment.mandatory,
-    dueDate: calendarDate(enrollment.assignment.dueDate),
-    completedLessons: enrollment.lessonProgress.length,
-    totalLessons: enrollment.assignment.moduleVersion.sections.reduce(
-      (total, section) => total + section.lessons.length,
-      0,
-    ),
-  }));
-
-  return {
-    summary: summarizeEnrollments(
-      items.map((item) => ({ status: item.status, mandatory: item.mandatory, dueDate: item.dueDate })),
-      todayInIst(),
-    ),
-    items,
-  };
-}
-
 export async function getAdminDashboard() {
   const [employeeCount, activeModuleCount, assignmentCount, enrollments] = await Promise.all([
     prisma().user.count({ where: { role: "EMPLOYEE", active: true } }),
