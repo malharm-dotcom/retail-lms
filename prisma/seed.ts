@@ -21,13 +21,15 @@ async function main() {
   const adminName = requiredSeedValue("SEED_ADMIN_NAME", "Retail LMS Admin").trim();
   const adminPassword = requiredSeedValue("SEED_ADMIN_PASSWORD", "ChangeMe@123");
 
+  const adminPasswordHash = await hash(adminPassword, 12);
+  // Re-running the seed resets the admin password to SEED_ADMIN_PASSWORD (recovery path).
   const admin = await prisma.user.upsert({
     where: { employeeCode: adminCode },
-    update: { name: adminName, active: true, role: "SUPER_ADMIN" },
+    update: { name: adminName, active: true, role: "SUPER_ADMIN", passwordHash: adminPasswordHash },
     create: {
       employeeCode: adminCode,
       name: adminName,
-      passwordHash: await hash(adminPassword, 12),
+      passwordHash: adminPasswordHash,
       role: "SUPER_ADMIN",
       active: true,
       forcePasswordChange: false,

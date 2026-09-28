@@ -72,7 +72,7 @@ This repository is designed for one production environment. Keep automatic deplo
 
 8. Restart the application and sign in with `SEED_ADMIN_CODE` and `SEED_ADMIN_PASSWORD`.
 
-The seed is idempotent. In production it only creates or restores the configured super-admin account. After the first successful seed, remove `SEED_ADMIN_PASSWORD` from Coolify unless another seed run is required.
+The seed is idempotent. In production it only creates or restores the configured super-admin account and resets its password to `SEED_ADMIN_PASSWORD`, so re-running it is the admin-password recovery path. After the first successful seed, remove `SEED_ADMIN_PASSWORD` from Coolify unless another seed run is required.
 
 Before every later database migration, take a PostgreSQL backup and run `npm run db:deploy` before restarting the new application version. With no staging environment, database backups and manual deployment are the rollback boundary.
 
