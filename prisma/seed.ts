@@ -30,7 +30,7 @@ async function main() {
       passwordHash: await hash(adminPassword, 12),
       role: "SUPER_ADMIN",
       active: true,
-      forcePasswordChange: isProduction,
+      forcePasswordChange: false,
     },
   });
 

@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { canAccessAdmin } from "@/lib/rbac";
 
 export default withAuth(
-  function middleware(request) {
+  function proxy(request) {
     const role = request.nextauth.token?.role;
     if (request.nextUrl.pathname.startsWith("/admin") && (!role || !canAccessAdmin(role))) {
       return NextResponse.redirect(new URL("/learn", request.url));
@@ -19,4 +19,3 @@ export default withAuth(
 export const config = {
   matcher: ["/((?!api/auth|api/health|login|_next/static|_next/image|favicon.ico).*)"],
 };
-
