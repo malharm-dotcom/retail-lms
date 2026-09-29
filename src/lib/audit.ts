@@ -39,6 +39,7 @@ const ACTION_LABELS: Record<string, string> = {
   "user.reactivated": "Reactivated person",
   "user.password_reset": "Reset password",
   "user.password_changed": "Changed own password",
+  "people.passwords_issued": "Issued temporary passwords",
 };
 
 export function actionLabel(action: string): string {

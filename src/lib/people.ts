@@ -16,7 +16,7 @@ export type PersonInput = {
   role?: string;
 };
 
-export type IssuedCredential = { employeeCode: string; name: string; password: string };
+export type IssuedCredential = { employeeCode: string; name: string; password: string; email: string | null; emailed?: boolean };
 
 const CODE_PATTERN = /^[A-Z0-9][A-Z0-9_\-/.]{1,31}$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -120,7 +120,7 @@ export async function upsertPeople(rows: PersonInput[], actor: { role: Role }) {
       const user = await prisma().user.create({
         data: { ...data, employeeCode: code, passwordHash: await hash(password, 10), forcePasswordChange: true },
       });
-      credentials.push({ employeeCode: code, name: user.name, password });
+      credentials.push({ employeeCode: code, name: user.name, password, email: user.email });
       touched.push(user.id);
       created++;
     }

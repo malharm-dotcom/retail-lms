@@ -49,6 +49,35 @@ export async function queueAssignmentEmails(users: Recipient[], module: ModuleRe
   return rows.length;
 }
 
+/**
+ * Email each person their employee code and temporary password, then send straight away
+ * (the cron job retries failures). The password is single-use: first sign-in forces a change.
+ * Returns the employee codes that were queued.
+ */
+export async function sendSignInDetails(people: { email: string | null; name: string; employeeCode: string; password: string }[]) {
+  if (!emailEnabled()) return new Set<string>();
+  const withEmail = people.filter((person) => person.email);
+  if (withEmail.length === 0) return new Set<string>();
+  await prisma().emailOutbox.createMany({
+    data: withEmail.map((person) => ({
+      recipient: person.email!,
+      subject: "Your Snitch Learning sign-in details",
+      htmlBody: layout(
+        `Hi ${person.name.split(" ")[0]}, your learning account is ready.`,
+        [
+          `Employee code: ${person.employeeCode}`,
+          `Temporary password: ${person.password}`,
+          "You will choose your own password the first time you sign in. Do not share these details.",
+        ],
+        appUrl("/login"),
+        "Sign in",
+      ),
+    })),
+  });
+  await deliverOutbox(withEmail.length + 50).catch(() => undefined);
+  return new Set(withEmail.map((person) => person.employeeCode));
+}
+
 /** Remind learners with incomplete mandatory work due within 3 days or overdue, at most every 3 days. */
 export async function queueDueReminders(now = new Date()) {
   if (!emailEnabled()) return 0;

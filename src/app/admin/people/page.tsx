@@ -4,7 +4,8 @@ import { AppShell } from "@/components/app-shell";
 import { EmptyState, PageHeader, StatusPill } from "@/components/ui";
 import { prisma } from "@/lib/db";
 import { requireAdminPage } from "@/lib/session";
-import { AddPersonForm, ImportForm } from "./people-forms";
+import { emailEnabled } from "@/lib/email";
+import { AddPersonForm, ImportForm, IssuePasswordsForm } from "./people-forms";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "People" };
@@ -26,7 +27,8 @@ export default async function PeoplePage({
     ...(role ? { role: role as Prisma.EnumRoleFilter["equals"] } : {}),
   };
 
-  const [people, total, stores, enrollmentCounts] = await Promise.all([
+  const emailOn = emailEnabled();
+  const [people, total, stores, enrollmentCounts, pending] = await Promise.all([
     prisma().user.findMany({
       where,
       take: PAGE,
@@ -36,6 +38,7 @@ export default async function PeoplePage({
     prisma().user.count({ where }),
     prisma().store.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
     prisma().enrollment.groupBy({ by: ["userId", "status"], _count: true, where: { user: where } }),
+    prisma().user.count({ where: { active: true, forcePasswordChange: true, id: { not: user.id } } }),
   ]);
 
   const learning = new Map<string, { total: number; done: number }>();
@@ -149,7 +152,18 @@ export default async function PeoplePage({
               </div>
             </div>
             <div className="panel-body">
-              <ImportForm />
+              <ImportForm emailOn={emailOn} />
+            </div>
+          </section>
+          <section className="panel">
+            <div className="panel-heading">
+              <div>
+                <p className="eyebrow">First sign-in</p>
+                <h2>Temporary passwords</h2>
+              </div>
+            </div>
+            <div className="panel-body">
+              <IssuePasswordsForm emailOn={emailOn} stores={stores} pending={pending} />
             </div>
           </section>
           <section className="panel">
@@ -162,7 +176,7 @@ export default async function PeoplePage({
                 <span className="text-link">Open</span>
               </summary>
               <div className="panel-body">
-                <AddPersonForm />
+                <AddPersonForm emailOn={emailOn} />
               </div>
             </details>
           </section>

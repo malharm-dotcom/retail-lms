@@ -3,7 +3,7 @@
 import { useActionState, useMemo } from "react";
 import { SubmitButton } from "@/components/forms";
 import type { IssuedCredential } from "@/lib/people";
-import { addPerson, importPeople, type ImportResult } from "./actions";
+import { addPerson, importPeople, issuePendingPasswords, type ImportResult } from "./actions";
 
 function toCsvText(rows: string[][]) {
   return rows.map((row) => row.map((cell) => (/[",\n]/.test(cell) ? `"${cell.replace(/"/g, '""')}"` : cell)).join(",")).join("\r\n");
@@ -11,7 +11,10 @@ function toCsvText(rows: string[][]) {
 
 function Credentials({ credentials }: { credentials: IssuedCredential[] }) {
   const href = useMemo(() => {
-    const csv = toCsvText([["employee_code", "name", "temporary_password"], ...credentials.map((row) => [row.employeeCode, row.name, row.password])]);
+    const csv = toCsvText([
+      ["employee_code", "name", "email", "temporary_password", "emailed"],
+      ...credentials.map((row) => [row.employeeCode, row.name, row.email ?? "", row.password, row.emailed ? "yes" : "no"]),
+    ]);
     return URL.createObjectURL(new Blob([`﻿${csv}`], { type: "text/csv" }));
   }, [credentials]);
 
@@ -35,6 +38,7 @@ function Credentials({ credentials }: { credentials: IssuedCredential[] }) {
                 <td className="code">{row.employeeCode}</td>
                 <td>{row.name}</td>
                 <td className="mono">{row.password}</td>
+                <td className="muted">{row.emailed ? "emailed" : row.email ? "" : "no email"}</td>
               </tr>
             ))}
           </tbody>
@@ -66,7 +70,20 @@ function Outcome({ state }: { state: ImportResult }) {
   );
 }
 
-export function ImportForm() {
+/** Email checkbox; disabled with an explanation until SMTP is configured. */
+function SendEmailCheck({ emailOn, label }: { emailOn: boolean; label: string }) {
+  return (
+    <label className="check" style={emailOn ? undefined : { opacity: 0.6, cursor: "not-allowed" }}>
+      <input type="checkbox" name="sendEmail" defaultChecked={emailOn} disabled={!emailOn} />
+      <span>
+        {label}
+        {emailOn ? null : <small className="muted" style={{ display: "block" }}>Email is not set up yet — you will get a credentials CSV to share instead.</small>}
+      </span>
+    </label>
+  );
+}
+
+export function ImportForm({ emailOn }: { emailOn: boolean }) {
   const [state, action] = useActionState(importPeople, null);
   return (
     <form action={action} className="form-stack">
@@ -81,6 +98,7 @@ export function ImportForm() {
           </a>
         </small>
       </label>
+      <SendEmailCheck emailOn={emailOn} label="Email sign-in details to new people who have an email address" />
       <div className="form-actions">
         <SubmitButton pendingLabel="Importing…">Import</SubmitButton>
       </div>
@@ -89,7 +107,42 @@ export function ImportForm() {
   );
 }
 
-export function AddPersonForm() {
+export function IssuePasswordsForm({ emailOn, stores, pending }: { emailOn: boolean; stores: { id: string; name: string }[]; pending: number }) {
+  const [state, action] = useActionState(issuePendingPasswords, null);
+  return (
+    <form
+      action={action}
+      className="form-stack"
+      onSubmit={(event) => {
+        if (!window.confirm("Issue new temporary passwords? Any temporary passwords already handed out for these people will stop working.")) event.preventDefault();
+      }}
+    >
+      <p className="panel-note" style={{ margin: 0 }}>
+        {pending
+          ? `${pending} ${pending === 1 ? "person has" : "people have"} not signed in yet. Issue them fresh temporary passwords in one go — useful if the credentials download after an import was missed.`
+          : "Everyone has signed in and set their own password."}
+      </p>
+      <label className="field">
+        <span>Who</span>
+        <select name="storeId" defaultValue="">
+          <option value="">Everyone who has not signed in</option>
+          {stores.map((store) => (
+            <option key={store.id} value={store.id}>
+              Not signed in · {store.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <SendEmailCheck emailOn={emailOn} label="Email each person their sign-in details" />
+      <div className="form-actions">
+        <SubmitButton variant="secondary" pendingLabel="Issuing…">Issue temporary passwords</SubmitButton>
+      </div>
+      <Outcome state={state} />
+    </form>
+  );
+}
+
+export function AddPersonForm({ emailOn }: { emailOn: boolean }) {
   const [state, action] = useActionState(addPerson, null);
   return (
     <form action={action} className="form-grid">
@@ -124,6 +177,9 @@ export function AddPersonForm() {
           <option value="HR_ADMIN">HR admin</option>
         </select>
       </label>
+      <div className="span-2">
+        <SendEmailCheck emailOn={emailOn} label="Email their sign-in details" />
+      </div>
       <div className="form-actions span-2">
         <SubmitButton pendingLabel="Adding…">Add person</SubmitButton>
       </div>
