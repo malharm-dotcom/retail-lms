@@ -29,7 +29,7 @@ const ACTION_LABELS: Record<string, string> = {
   "lesson.created": "Added lesson",
   "lesson.updated": "Edited lesson",
   "lesson.deleted": "Deleted lesson",
-  "asset.uploaded": "Uploaded PDF",
+  "asset.uploaded": "Uploaded file",
   "assignment.created": "Assigned module",
   "assignment.updated": "Changed deadline",
   "assignment.synced": "Enrolled missing people",

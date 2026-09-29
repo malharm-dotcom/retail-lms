@@ -11,7 +11,7 @@ export function publishProblems(version: PublishCheckVersion): string[] {
   if (lessons.length === 0) problems.push("Add at least one lesson.");
   if (lessons.length > 0 && !lessons.some((lesson) => lesson.required)) problems.push("At least one lesson must be required.");
   for (const lesson of lessons) {
-    if (lesson.type === "VIDEO" && !lesson.youtubeVideoId) problems.push(`“${lesson.title}” has no YouTube video.`);
+    if (lesson.type === "VIDEO" && !lesson.youtubeVideoId && !lesson.assetId) problems.push(`“${lesson.title}” has no video.`);
     if (lesson.type === "PDF" && !lesson.assetId) problems.push(`“${lesson.title}” has no PDF uploaded.`);
     if (lesson.type === "RICH_TEXT" && !lesson.body?.trim()) problems.push(`“${lesson.title}” has no text.`);
   }

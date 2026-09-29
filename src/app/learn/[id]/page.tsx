@@ -259,12 +259,13 @@ function LessonStage({
       <div className="stage-body">
         {!isOpen ? (
           <p className="callout">This lesson unlocks when you finish the one before it.</p>
-        ) : lesson.type === "VIDEO" && lesson.youtubeVideoId ? (
+        ) : lesson.type === "VIDEO" && (lesson.youtubeVideoId || lesson.asset) ? (
           <VideoLesson
             key={lesson.id}
             enrollmentId={enrollmentId}
             lessonId={lesson.id}
-            videoId={lesson.youtubeVideoId}
+            videoId={lesson.youtubeVideoId ?? undefined}
+            src={lesson.asset && !lesson.youtubeVideoId ? `/api/files/${lesson.asset.id}` : undefined}
             startAt={isDone ? 0 : (progress?.lastPositionSeconds ?? 0)}
             initialPercent={progress?.percentComplete ?? 0}
             required={lesson.requiredWatchPercentage}

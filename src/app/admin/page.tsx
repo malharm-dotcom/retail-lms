@@ -31,7 +31,7 @@ export default async function AdminPage() {
 
   const steps = [
     { done: dashboard.employeeCount > 0, label: "Import your staff", href: "/admin/people", note: "Upload the HR master CSV." },
-    { done: dashboard.activeModuleCount + draftCount > 0, label: "Build a module", href: "/admin/modules", note: "Videos, PDFs, text and a quiz." },
+    { done: dashboard.activeModuleCount + draftCount > 0, label: "Build a module", href: "/admin/modules", note: "YouTube or uploaded videos, PDFs, text and a quiz." },
     { done: dashboard.activeModuleCount > 0, label: "Publish it", href: "/admin/modules", note: "Locks the content for tracking." },
     { done: dashboard.assignmentCount > 0, label: "Assign it", href: "/admin/assignments", note: "To everyone, a store, or people." },
   ];

@@ -23,7 +23,7 @@ import {
   updateDetails,
   updateLesson,
 } from "../actions";
-import { AddLessonForm, PdfUploadForm, QuestionForm, RichTextHelp } from "./builder-forms";
+import { AddLessonForm, PdfUploadForm, QuestionForm, RichTextHelp, VideoUploadForm } from "./builder-forms";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Module" };
@@ -230,6 +230,15 @@ export default async function ModuleBuilderPage({
                           </a>
                         </p>
                       ) : null}
+                      {lesson.type === "VIDEO" && lesson.asset ? (
+                        <p className="panel-note">
+                          Uploaded video:{" "}
+                          <a className="text-link" href={`/api/files/${lesson.asset.id}`} target="_blank" rel="noreferrer">
+                            {lesson.asset.fileName} ↗
+                          </a>{" "}
+                          ({(lesson.asset.sizeBytes / 1024 / 1024).toFixed(1)} MB)
+                        </p>
+                      ) : null}
                       {lesson.type === "PDF" && lesson.asset ? (
                         <p className="panel-note">
                           File:{" "}
@@ -247,7 +256,12 @@ export default async function ModuleBuilderPage({
                               <span>Lesson title</span>
                               <input name="title" defaultValue={lesson.title} required maxLength={140} />
                             </label>
-                            {lesson.type === "VIDEO" ? (
+                            {lesson.type === "VIDEO" && lesson.asset ? (
+                              <label className="field">
+                                <span>Required watch %</span>
+                                <input name="requiredWatchPercentage" type="number" min={50} max={100} defaultValue={lesson.requiredWatchPercentage} />
+                              </label>
+                            ) : lesson.type === "VIDEO" ? (
                               <>
                                 <label className="field">
                                   <span>YouTube link</span>
@@ -275,6 +289,7 @@ export default async function ModuleBuilderPage({
                             </div>
                           </ActionForm>
                           {lesson.type === "PDF" ? <PdfUploadForm lessonId={lesson.id} /> : null}
+                          {lesson.type === "VIDEO" && lesson.asset ? <VideoUploadForm lessonId={lesson.id} /> : null}
                           <form action={deleteLesson}>
                             <input type="hidden" name="lessonId" value={lesson.id} />
                             <ConfirmButton message={`Delete the lesson “${lesson.title}”?`}>Delete lesson</ConfirmButton>

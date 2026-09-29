@@ -34,12 +34,53 @@ function loadYouTubeApi() {
 }
 
 const PLAYING = 1;
+const PAUSED = 2;
 const ENDED = 0;
+
+/** Wraps an uploaded video in the same shape as the YouTube player, so tracking is shared. */
+function nativePlayer(
+  container: HTMLElement,
+  src: string,
+  startAt: number,
+  onStateChange: (state: number) => void,
+  onError: () => void,
+): YTPlayer {
+  const video = document.createElement("video");
+  video.src = src;
+  video.controls = true;
+  video.playsInline = true;
+  video.preload = "metadata";
+  video.disablePictureInPicture = true;
+  video.setAttribute("controlsList", "nodownload noplaybackrate");
+  video.addEventListener("loadedmetadata", () => {
+    if (startAt > 0 && startAt < video.duration - 1) video.currentTime = startAt;
+  });
+  // Same 2x ceiling the server enforces.
+  video.addEventListener("ratechange", () => {
+    if (video.playbackRate > 2) video.playbackRate = 2;
+  });
+  video.addEventListener("playing", () => onStateChange(PLAYING));
+  video.addEventListener("pause", () => onStateChange(video.ended ? ENDED : PAUSED));
+  video.addEventListener("ended", () => onStateChange(ENDED));
+  video.addEventListener("error", onError);
+  container.replaceChildren(video);
+  return {
+    getCurrentTime: () => video.currentTime,
+    getDuration: () => (Number.isFinite(video.duration) ? video.duration : 0),
+    getPlayerState: () => (video.ended ? ENDED : video.paused ? PAUSED : PLAYING),
+    destroy: () => {
+      video.pause();
+      video.removeAttribute("src");
+      video.load();
+    },
+  };
+}
 
 export function VideoLesson({
   enrollmentId,
   lessonId,
   videoId,
+  src,
   startAt,
   initialPercent,
   required,
@@ -47,7 +88,9 @@ export function VideoLesson({
 }: {
   enrollmentId: string;
   lessonId: string;
-  videoId: string;
+  /** YouTube id, or `src` for an uploaded file. */
+  videoId?: string;
+  src?: string;
   startAt: number;
   initialPercent: number;
   required: number;
@@ -129,7 +172,16 @@ export function VideoLesson({
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("pagehide", flushOnLeave);
 
-    loadYouTubeApi()
+    // Ended: credit the final second the 1s sampler cannot see.
+    const onStateChange = (state: number) => {
+      const duration = player?.getDuration?.() ?? 0;
+      if (state === ENDED && last !== null && duration - last <= 2.5) pending.push([last, duration]);
+      if (state !== PLAYING) void flush();
+    };
+
+    if (src) {
+      if (container) player = nativePlayer(container, src, initial.current.startAt, onStateChange, () => setStatus("error"));
+    } else loadYouTubeApi()
       .then(() => {
         if (cancelled || !container || !window.YT) return;
         // YouTube swaps the host element for an iframe, so give it a node React does not own.
@@ -139,12 +191,7 @@ export function VideoLesson({
           videoId,
           playerVars: { start: Math.floor(initial.current.startAt), rel: 0, modestbranding: 1, playsinline: 1 },
           events: {
-            onStateChange: (event: { data: number }) => {
-              // Ended: credit the final second the 1s sampler cannot see.
-              const duration = player?.getDuration?.() ?? 0;
-              if (event.data === ENDED && last !== null && duration - last <= 2.5) pending.push([last, duration]);
-              if (event.data !== PLAYING) void flush();
-            },
+            onStateChange: (event: { data: number }) => onStateChange(event.data),
             onError: () => setStatus("error"),
           },
         });
@@ -160,7 +207,7 @@ export function VideoLesson({
       player?.destroy?.();
       container?.replaceChildren();
     };
-  }, [enrollmentId, lessonId, videoId, router]);
+  }, [enrollmentId, lessonId, videoId, src, router]);
 
   return (
     <div>

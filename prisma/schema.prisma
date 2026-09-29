@@ -178,9 +178,20 @@ model Asset {
   fileName        String
   mimeType        String
   sizeBytes       Int
-  data            Bytes
+  data            Bytes?
+  chunks          AssetChunk[]
   lessons         Lesson[]
   createdAt       DateTime       @default(now())
+}
+
+// Uploaded videos: fixed-size slices (VIDEO_CHUNK_BYTES, last one shorter) so they stream with seeking.
+model AssetChunk {
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  index   Int
+  data    Bytes
+
+  @@id([assetId, index])
 }
 
 model Quiz {

@@ -25,7 +25,7 @@ describe("publishProblems", () => {
     expect(
       publishProblems(
         version(
-          [lesson({}), lesson({ type: "VIDEO", youtubeVideoId: "abcdefghijk" }), lesson({ type: "PDF", assetId: "a1" })],
+          [lesson({}), lesson({ type: "VIDEO", youtubeVideoId: "abcdefghijk" }), lesson({ type: "VIDEO", assetId: "v1" }), lesson({ type: "PDF", assetId: "a1" })],
           [{ options: [{ isCorrect: true }, { isCorrect: false }] }],
         ),
       ),
@@ -39,7 +39,7 @@ describe("publishProblems", () => {
   it("names lessons missing their content", () => {
     expect(
       publishProblems(version([lesson({ title: "Intro", type: "VIDEO" }), lesson({ title: "Policy", type: "PDF" })])),
-    ).toEqual(["“Intro” has no YouTube video.", "“Policy” has no PDF uploaded."]);
+    ).toEqual(["“Intro” has no video.", "“Policy” has no PDF uploaded."]);
   });
 
   it("requires exactly one correct option per question", () => {

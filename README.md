@@ -1,6 +1,6 @@
 # Retail Learning Desk
 
-Desktop-first LMS for Snitch retail employees and HR. HR builds versioned modules (YouTube video, PDF, text, quiz, policy acknowledgement), imports staff from CSV, assigns learning to everyone / a store / a department / individuals, and tracks completion per person. Employees sign in with an employee code, work through assigned modules in order, and every step is recorded server-side.
+Desktop-first LMS for Snitch retail employees and HR. HR builds versioned modules (YouTube or uploaded video, PDF, text, quiz, policy acknowledgement), imports staff from CSV, assigns learning to everyone / a store / a department / individuals, and tracks completion per person. Employees sign in with an employee code, work through assigned modules in order, and every step is recorded server-side.
 
 ## Stack
 
@@ -85,7 +85,7 @@ npm run db:seed        # idempotent bootstrap data
 
 ## What HR can do
 
-- **Modules** (`/admin/modules`): build a draft with sections and lessons — YouTube video (unique watched-seconds tracking, default 95%), PDF up to 25 MB (export PowerPoint to PDF first), or text. Optional quiz (multiple choice / true-false, pass mark) and policy acknowledgement. Publishing locks the version; “Edit as new version” copies it into a new draft. Learners keep the version they were assigned.
+- **Modules** (`/admin/modules`): build a draft with sections and lessons — YouTube video or an uploaded video file (MP4/MOV/WebM up to 500 MB, stored in Postgres in 8 MB chunks and streamed with seeking; both use unique watched-seconds tracking, default 95%), PDF up to 25 MB (export PowerPoint to PDF first), or text. Optional quiz (multiple choice / true-false, pass mark) and policy acknowledgement. Publishing locks the version; “Edit as new version” copies it into a new draft. Learners keep the version they were assigned.
 - **People** (`/admin/people`): CSV import (template at `/admin/people/template`). New people get a one-time temporary password, downloadable as a credentials CSV, and must change it at first sign-in. Stores and departments are created from the CSV. Deactivate instead of delete; history stays.
 - **Assignments** (`/admin/assignments`): everyone, a store, a department, or employee codes; due date and mandatory flag. New and moved employees are enrolled into open group assignments automatically.
 - **Reports** (`/admin/reports`): completion by store and module, overdue list, CSV export of every enrolment with quiz score and acknowledgement time.

@@ -250,10 +250,11 @@ export async function updateLesson(_previous: ActionResult, formData: FormData):
       title: requiredText(formData, "title", "Lesson title"),
       required: formData.get("required") === "on",
     };
-    if (lesson.type === "VIDEO") {
+    if (lesson.type === "VIDEO") data.requiredWatchPercentage = percentField(formData);
+    // Uploaded-video lessons (assetId) change their file through /api/files/video instead.
+    if (lesson.type === "VIDEO" && !lesson.assetId) {
       const id = videoField(formData);
       data.youtubeVideoId = id;
-      data.requiredWatchPercentage = percentField(formData);
       if (id !== lesson.youtubeVideoId) data.videoDurationSeconds = null;
     }
     if (lesson.type === "RICH_TEXT") data.body = requiredText(formData, "body", "Lesson text");
